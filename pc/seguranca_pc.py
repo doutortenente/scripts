@@ -459,6 +459,53 @@ def sec_portas() -> Secao:
             f"tailnet (rede privada): {', '.join(sorted(set(tailscale))[:6])}"
         )
 
+    # Socket ouvindo em 0.0.0.0 so e' superficie real se o firewall deixar
+    # entrar. Sem cruzar com o ufw, o boletim acusa porta que ja esta' fechada
+    # — alarme falso treina o operador a ignorar o boletim.
+    rc_fw, out_fw = sudo_run(["ufw", "status"])
+    _, out_fw_v = sudo_run(["ufw", "status", "verbose"])
+    fw_ativo = bool(re.search(r"^(Status|Estado):\s*(active|ativo)", out_fw, re.M | re.I))
+    liberadas: set[str] = set()
+    if fw_ativo:
+        for l in out_fw.splitlines():
+            if not re.search(r"\bALLOW\b", l, re.I):
+                continue
+            mp = re.match(r"\s*(\d+)(?:/(?:tcp|udp))?\s", l)
+            if mp:
+                liberadas.add(mp.group(1))
+
+    # Com politica default deny(entrada), so entra o que tem regra ALLOW
+    # explicita por PORTA. Regra por interface (ex.: "Anywhere on tailscale0")
+    # nao expoe a porta na internet — ja e' contabilizada como tailnet acima.
+    deny_entrada = bool(
+        re.search(r"deny\s*\((?:incoming|entrada)\)", out_fw, re.I)
+    ) or bool(re.search(r"deny\s*\((?:incoming|entrada)\)", out_fw_v, re.I))
+
+    if fw_ativo and deny_entrada:
+        alcancaveis = {k: v for k, v in expostas.items()
+                       if k.split("/", 1)[0] in liberadas}
+        n_fech = len(expostas) - len(alcancaveis)
+        if n_fech:
+            s.linhas.append(
+                f"firewall ativo (deny entrada): {n_fech} de {len(expostas)} "
+                "porta(s) NAO alcancavel de fora"
+            )
+        expostas = alcancaveis
+
+    # Porta liberada por regra COM comentario e' decisao registrada do
+    # operador, nao achado. Sem isso o boletim reclama todo dia da mesma
+    # regra deliberada e o operador para de ler.
+    documentadas = set(re.findall(r"^\s*(\d+)(?:/(?:tcp|udp))?\s.*#\s*\S", out_fw, re.M))
+    if documentadas:
+        justificadas = {k: v for k, v in expostas.items()
+                        if k.split("/", 1)[0] in documentadas}
+        if justificadas:
+            s.linhas.append(
+                "liberada(s) por regra documentada no ufw: "
+                + ", ".join(sorted(k.split("/", 1)[0] for k in justificadas))
+            )
+        expostas = {k: v for k, v in expostas.items() if k not in justificadas}
+
     if expostas:
         s.grade(WARN)
         s.linhas.append(f"{len(expostas)} porta(s) em toda interface:")
@@ -466,11 +513,14 @@ def sec_portas() -> Secao:
             porta, dono = chave.split("/", 1)
             s.linhas.append(f"  · {porta:<6} {dono}  em {expostas[chave]}")
         s.conduta = (
-            "Cada porta acima aceita conexão de qualquer rede em que a máquina entrar "
-            "(café, hotel). Confirme que é intencional ou restrinja ao localhost"
+            "Porta acima ouve em toda interface E passa pelo firewall — "
+            "confirme que é intencional ou restrinja ao localhost"
         )
     else:
-        s.linhas.append("nenhuma porta ouvindo além do localhost/tailnet")
+        s.linhas.append(
+            "nenhuma porta alcancavel de fora (firewall + localhost/tailnet)"
+            if fw_ativo else "nenhuma porta ouvindo além do localhost/tailnet"
+        )
     return s
 
 
