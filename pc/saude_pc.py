@@ -233,6 +233,26 @@ def porta_viva(host: str, port: int) -> bool:
 
 def sec_mcp() -> Secao:
     s = Secao("Conectores MCP da IDE")
+
+    # Conector MCP da IDE so faz sentido com IDE JetBrains ABERTA: o servidor
+    # e' um plugin dentro dela. Sem IDE, porta morta e' o estado correto, e
+    # acusar isso todo dia treina o operador a ignorar o boletim.
+    # `pgrep -f` casaria com o proprio shell que roda este script (o padrao
+    # aparece na linha de comando dele). Filtra pelo binario da JVM da IDE.
+    ps = subprocess.run(
+        ["ps", "-eo", "comm="], capture_output=True, text=True, check=False
+    )
+    ide_viva = any(
+        c.strip() in {"idea", "pycharm", "webstorm", "rustrover", "goland", "java"}
+        and c.strip() != "java"
+        for c in ps.stdout.splitlines()
+    ) or any(
+        "jetbrains" in c.lower() for c in ps.stdout.splitlines()
+    )
+    if not ide_viva:
+        s.linhas.append("nenhuma IDE JetBrains aberta — conector inativo (esperado)")
+        return s
+
     cfg_path = HOME / ".claude.json"
     if not cfg_path.exists():
         s.grade(WARN)
