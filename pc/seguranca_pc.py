@@ -58,7 +58,10 @@ def run(cmd: list[str], timeout: int = 8) -> tuple[int, str]:
     """Roda comando local e devolve (rc, saída). Nunca levanta exceção."""
     try:
         p = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=timeout, check=False
+            cmd, capture_output=True, text=True, timeout=timeout, check=False,
+            # Locale C: sem isso o sistema responde em pt-BR ("Estado: ativo")
+            # e todo parser abaixo, que casa texto em ingles, le errado.
+            env={**os.environ, "LC_ALL": "C", "LANG": "C"},
         )
         return p.returncode, (p.stdout + p.stderr).strip()
     except (FileNotFoundError, subprocess.TimeoutExpired, PermissionError):
@@ -69,20 +72,69 @@ def tem(binario: str) -> bool:
     return shutil.which(binario) is not None
 
 
+def _senha_do_cofre() -> str | None:
+    """Le SUDO_TIJOLAO_PASSWORD do cofre ~/projetos/.env, se existir.
+
+    Boletim que nao consegue ler firewall/AppArmor reporta [SEM_LEITURA] no
+    lugar do estado real — e item nao medido nao serve pra decidir nada. O
+    cofre ja e 600 e fica fora de todo repo git; usa-lo aqui troca dois "nao
+    sei" por dois numeros. A senha nunca e impressa nem entra em argv (vai
+    por stdin do `sudo -S`).
+    """
+    cofre = HOME / "projetos" / ".env"
+    try:
+        if cofre.stat().st_mode & 0o077:
+            return None  # permissao frouxa: nao usa
+        for linha in cofre.read_text(encoding="utf-8", errors="replace").splitlines():
+            if linha.startswith("SUDO_TIJOLAO_PASSWORD="):
+                v = linha.split("=", 1)[1].strip().strip("\"'")
+                return v or None
+    except OSError:
+        return None
+    return None
+
+
+_SENHA = _senha_do_cofre()
+
+
 def sudo_livre() -> bool:
-    """True se sudo roda sem pedir senha. `-n` garante que nunca trava."""
+    """True se da pra rodar sudo: sem senha (-n) ou com a senha do cofre."""
     rc, _ = run(["sudo", "-n", "true"], timeout=4)
-    return rc == 0
+    if rc == 0:
+        return True
+    if _SENHA:
+        try:
+            p = subprocess.run(
+                ["sudo", "-S", "-p", "", "true"],
+                input=_SENHA + "\n", capture_output=True, text=True,
+                timeout=6, check=False,
+            )
+            return p.returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+    return False
 
 
 SUDO_OK = sudo_livre()
 
 
 def sudo_run(cmd: list[str], timeout: int = 8) -> tuple[int, str]:
-    """Roda com sudo -n se disponível; senão devolve rc=126 (sem privilégio)."""
-    if not SUDO_OK:
+    """Roda privilegiado. Tenta -n; cai pra senha do cofre; senao rc=126."""
+    rc, out = run(["sudo", "-n"] + cmd, timeout=timeout)
+    if rc != 126 and rc != 1 and out:
+        return rc, out
+    if not _SENHA:
         return 126, ""
-    return run(["sudo", "-n"] + cmd, timeout=timeout)
+    try:
+        p = subprocess.run(
+            ["sudo", "-S", "-p", ""] + cmd,
+            input=_SENHA + "\n", capture_output=True, text=True,
+            timeout=timeout, check=False,
+            env={**os.environ, "LC_ALL": "C", "LANG": "C"},
+        )
+        return p.returncode, (p.stdout + p.stderr).strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return 126, ""
 
 
 # --------------------------------------------------------------------------- #
@@ -104,15 +156,18 @@ def sec_firewall() -> Secao:
     # ufw status precisa de root; sem sudo livre, o boot é a melhor evidência.
     rc, out = sudo_run(["ufw", "status", "verbose"])
     if rc == 0 and out:
-        ativo = "Status: active" in out
+        # O ufw traduz a propria saida via gettext: LC_ALL=C nao reverte.
+        # Por isso o parser aceita as duas formas (en/pt-BR).
+        ativo = bool(re.search(r"^(Status|Estado):\s*(active|ativo)", out, re.M | re.I))
         regras = len(re.findall(r"\b(ALLOW|DENY|REJECT|LIMIT)\b", out))
         politica = "?"
-        m = re.search(r"Default:\s*(.+)", out)
+        m = re.search(r"^(?:Default|Predefinido):\s*(.+)", out, re.M | re.I)
         if m:
             politica = m.group(1).strip()
         if ativo:
             s.linhas.append(f"ufw ativo · {regras} regra(s) · default: {politica}")
-            if "deny (incoming)" not in politica:
+            entrada_negada = re.search(r"deny\s*\((incoming|entrada)\)", politica, re.I)
+            if not entrada_negada:
                 s.grade(WARN)
                 s.conduta = (
                     "Entrada não está em deny por padrão — "
@@ -353,7 +408,7 @@ def sec_portas() -> Secao:
 
     # -p nomeia o processo dono. Sem root vem só o que é do próprio usuário;
     # porta sem dono legível vira "?" em vez de sumir do boletim.
-    rc, out = run(["ss", "-tulnpH"])
+    rc, out = sudo_run(["ss", "-tulnpH"])
     if rc != 0 or not out:
         s.grade(UNK)
         s.linhas.append("[SEM_LEITURA] saída de `ss`")

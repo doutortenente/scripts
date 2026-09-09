@@ -276,7 +276,7 @@ def sec_node() -> Secao:
             [
                 "bash",
                 "-lc",
-                'source ~/.nvm/nvm.sh >/dev/null 2>&1 && echo "$(nvm version default) $(node -v 2>/dev/null)"',
+                'source ${NVM_DIR:-$HOME/.config/nvm}/nvm.sh >/dev/null 2>&1 && echo "$(nvm version default) $(node -v 2>/dev/null)"',
             ],
             capture_output=True,
             text=True,
@@ -291,8 +291,8 @@ def sec_node() -> Secao:
         pass
     # fallback: lê o alias e resolve contra as versões instaladas
     if not default or not default.startswith("v"):
-        alias = HOME / ".nvm/alias/default"
-        vdir = HOME / ".nvm/versions/node"
+        alias = HOME / ".config/nvm/alias/default"
+        vdir = HOME / ".config/nvm/versions/node"
         if alias.exists() and vdir.exists():
             want = alias.read_text().strip()
             cands = sorted(
