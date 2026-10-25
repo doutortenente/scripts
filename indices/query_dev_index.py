@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Consulta memory/dev_index.db (~/projetos inteiro).
 
-python3 ~/projetos/scripts/indices/query_dev_index.py repos
-python3 ~/projetos/scripts/indices/query_dev_index.py find <termo>
-python3 ~/projetos/scripts/indices/query_dev_index.py search <termo>
-python3 ~/projetos/scripts/indices/query_dev_index.py repo <nome>
-python3 ~/projetos/scripts/indices/query_dev_index.py top [--n 15]
+python3 ~/src/scripts/indices/query_dev_index.py repos
+python3 ~/src/scripts/indices/query_dev_index.py find <termo>
+python3 ~/src/scripts/indices/query_dev_index.py search <termo>
+python3 ~/src/scripts/indices/query_dev_index.py repo <nome>
+python3 ~/src/scripts/indices/query_dev_index.py top [--n 15]
 """
 
 import argparse
@@ -15,7 +15,7 @@ import sys
 
 DEV = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)  # ~/projetos
+)  # ~/src
 ROOT = DEV
 DB = os.path.join(ROOT, "memory", "dev_index.db")
 
@@ -23,7 +23,7 @@ DB = os.path.join(ROOT, "memory", "dev_index.db")
 def connect():
     if not os.path.exists(DB):
         sys.exit(
-            f"Índice ausente: {DB}\nRode: python3 ~/projetos/scripts/indices/build_dev_index.py"
+            f"Índice ausente: {DB}\nRode: python3 ~/src/scripts/indices/build_dev_index.py"
         )
     return sqlite3.connect(DB)
 

@@ -2,7 +2,7 @@
 """Indexa ~/projetos/ inteiro → memory/dev_index.db + MAPA-DEV.md.
 
 Doutrina ZERO ALUCINACAO: so fato lido do disco.
-Uso: python3 ~/projetos/scripts/indices/build_dev_index.py  (de ~/projetos)
+Uso: python3 ~/src/scripts/indices/build_dev_index.py  (de ~/projetos)
 """
 
 import datetime
@@ -13,7 +13,7 @@ import sys
 
 DEV = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)  # ~/projetos
+)  # ~/src
 ROOT = DEV
 DB = os.path.join(ROOT, "memory", "dev_index.db")
 MAPA = os.path.join(ROOT, "memory", "MAPA-DEV.md")
@@ -223,7 +223,7 @@ def write_mapa(c, today):
     out = [
         "# MAPA — ~/projetos/",
         "",
-        f"> Gerado {today} por `~/projetos/scripts/indices/build_dev_index.py`.",
+        f"> Gerado {today} por `~/src/scripts/indices/build_dev_index.py`.",
         f"> DB: `memory/dev_index.db` · FTS5 token a token.",
         "",
         f"**Total:** {tot[0]} arquivos · {tot[1]/1024/1024:.1f} MB · {tot[2]:,} linhas · {tot[3]:,} tokens",
@@ -246,10 +246,10 @@ def write_mapa(c, today):
         "## Consultas",
         "",
         "```bash",
-        "python3 ~/projetos/scripts/indices/query_dev_index.py repos",
-        "python3 ~/projetos/scripts/indices/query_dev_index.py find CLAUDE",
-        "python3 ~/projetos/scripts/indices/query_dev_index.py search supabase",
-        "python3 ~/projetos/scripts/indices/query_dev_index.py repo sasi",
+        "python3 ~/src/scripts/indices/query_dev_index.py repos",
+        "python3 ~/src/scripts/indices/query_dev_index.py find CLAUDE",
+        "python3 ~/src/scripts/indices/query_dev_index.py search supabase",
+        "python3 ~/src/scripts/indices/query_dev_index.py repo sasi",
         "```",
     ]
     with open(MAPA, "w", encoding="utf-8") as f:

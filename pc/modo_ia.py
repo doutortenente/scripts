@@ -35,7 +35,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ENV_FILE = Path.home() / "projetos" / ".env"
+ENV_FILE = Path.home() / ".local" / "secrets" / ".env"
 GOV_PATH = "/sys/devices/system/cpu/cpu{}/cpufreq/scaling_governor"
 EPP_PATH = "/sys/devices/system/cpu/cpu{}/cpufreq/energy_performance_preference"
 
@@ -73,11 +73,11 @@ def ler(caminho: str) -> str:
 
 
 def senha_sudo() -> str | None:
-    """Lê SUDO_TIJOLAO_PASSWORD do cofre ~/projetos/.env. Nunca imprime o valor."""
+    """Lê SUDO_PASSWORD do cofre ~/.local/secrets/.env. Nunca imprime o valor."""
     if not ENV_FILE.exists():
         return None
     for linha in ENV_FILE.read_text(encoding="utf-8", errors="ignore").splitlines():
-        m = re.match(r'^\s*(?:export\s+)?SUDO_TIJOLAO_PASSWORD\s*=\s*(.*)$', linha)
+        m = re.match(r'^\s*(?:export\s+)?SUDO_PASSWORD\s*=\s*(.*)$', linha)
         if m:
             return m.group(1).strip().strip('"').strip("'")
     return None
@@ -92,7 +92,7 @@ def sudo(comando: list[str]) -> tuple[int, str]:
     """
     pw = senha_sudo()
     if pw is None:
-        return 1, "SUDO_TIJOLAO_PASSWORD não encontrada em ~/projetos/.env"
+        return 1, "SUDO_PASSWORD não encontrada em ~/.local/secrets/.env"
     try:
         p = subprocess.run(
             ["sudo", "-S", "-p", ""] + comando,

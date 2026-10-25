@@ -74,11 +74,11 @@ def sec_disco() -> Secao:
     if pct > 85:
         s.grade(CRIT)
         s.conduta = (
-            "Disco > 85% — rode  python3 ~/projetos/scripts/pc/pc_higiene.py --apply"
+            "Disco > 85% — rode  python3 ~/src/scripts/pc/pc_higiene.py --apply"
         )
     elif pct > 75:
         s.grade(WARN)
-        s.conduta = "Disco > 75% — considere  python3 ~/projetos/scripts/pc/pc_higiene.py  (dry-run primeiro)"
+        s.conduta = "Disco > 75% — considere  python3 ~/src/scripts/pc/pc_higiene.py  (dry-run primeiro)"
     s.linhas.append(
         f"usado {human(usado)} / total {human(total)} ({pct:.0f}%) · livre {human(livre)}"
     )
@@ -280,7 +280,7 @@ def sec_mcp() -> Secao:
             s.grade(WARN)
             algum_morto = True
     if algum_morto:
-        s.conduta = "porta MCP da IDE morta — rode  python3 ~/projetos/scripts/pc/fix_ide_mcp.py  e depois  /mcp"
+        s.conduta = "porta MCP da IDE morta — reabra a IDE e rode  /mcp  (fix_ide_mcp.py foi removido em out-2026)"
     return s
 
 
@@ -296,7 +296,7 @@ def sec_node() -> Secao:
             [
                 "bash",
                 "-lc",
-                'source ${NVM_DIR:-$HOME/.config/nvm}/nvm.sh >/dev/null 2>&1 && echo "$(nvm version default) $(node -v 2>/dev/null)"',
+                'source ${NVM_DIR:-$HOME/.local/share/nvm}/nvm.sh >/dev/null 2>&1 && echo "$(nvm version default) $(node -v 2>/dev/null)"',
             ],
             capture_output=True,
             text=True,
@@ -311,8 +311,8 @@ def sec_node() -> Secao:
         pass
     # fallback: lê o alias e resolve contra as versões instaladas
     if not default or not default.startswith("v"):
-        alias = HOME / ".config/nvm/alias/default"
-        vdir = HOME / ".config/nvm/versions/node"
+        alias = HOME / ".local/share/nvm/alias/default"
+        vdir = HOME / ".local/share/nvm/versions/node"
         if alias.exists() and vdir.exists():
             want = alias.read_text().strip()
             cands = sorted(

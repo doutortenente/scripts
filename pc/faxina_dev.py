@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-faxina_dev.py — Boletim de faxina do workspace ~/projetos (LEITURA PURA)
+faxina_dev.py — Boletim de faxina do workspace ~/src (LEITURA PURA)
 
 O QUE FAZ
     Imprime um relatório de higiene do workspace do PC "Tijolão". Confere 5
-    frentes que costumam bagunçar: raiz ~/projetos poluída, Downloads acumulando,
+    frentes que costumam bagunçar: raiz ~/src poluída, Downloads acumulando,
     repositórios git sujos/dessincronizados, worktrees órfãos e lixo comum
     (.bak, __pycache__, .zip soltos). NÃO apaga, NÃO move, NÃO altera NADA em
     lugar nenhum — só lê o estado e imprime na tela.
@@ -17,14 +17,14 @@ POR QUE EXISTE
     com --apply próprio); este script é só o diagnóstico.
 
 COMO USAR
-    python3 /home/dr/projetos/scripts/faxina_dev.py
+    python3 /home/dr/src/scripts/faxina_dev.py
     (sem flags — é boletim, sempre sai com código 0)
 
 LIBS
     Só stdlib (os, subprocess, pathlib, datetime, time). Nada a instalar.
 
 MANUTENÇÃO
-    - RAIZ_ESPERADA: allowlist do estado limpo da raiz ~/projetos. Se você adicionar
+    - RAIZ_ESPERADA: allowlist do estado limpo da raiz ~/src. Se você adicionar
       de propósito um item novo na raiz, inclua o nome aqui pra parar de acusar.
     - DOWNLOADS_PINNED: arquivos do Downloads que podem ficar velhos sem virar
       alerta (ex.: zips do catálogo de skills, presos a uma tarefa em curso).
@@ -39,26 +39,20 @@ from pathlib import Path
 # ─── Configuração editável ────────────────────────────────────────────────────
 
 HOME = Path("/home/dr")
-DEV = HOME / "projetos"
+DEV = HOME / "src"
 DOWNLOADS = HOME / "Downloads"
 
-# Snapshot do estado LIMPO da raiz ~/projetos (atualizado 23-jul-2026,
-# pós-migração ~/dev→~/projetos e _lab→rascunhos).
+# Snapshot do estado LIMPO da raiz ~/src (atualizado 23-jul-2026,
+# pós-migração ~/dev→~/src e _lab→rascunhos).
 # Qualquer item na raiz fora desta lista é sinalizado como intruso.
 RAIZ_ESPERADA = {
-    ".claude",
-    "central-do-trampo",  # app Central do Trampo — movido pra cá pelo operador (28-jul-2026)
-    "claude",
-    "CLAUDE.md",
-    ".env",
-    ".gitignore",
-    ".idea",
-    ".mcp.json",
-    "mapa-claude-e-catalogo-skills",
-    "rascunhos",
+    # repos de ~/src (25-out-2026; mapa em claude-workspace/context/workspace-claude.md)
+    "claude-workspace",
+    "hermes-agent",
+    "hermes-workspace",
+    "plantao-ao-vivo",
     "sasi",
     "scripts",
-    "templates",
 }
 
 # Arquivos do Downloads que NÃO devem virar alerta mesmo velhos (presos a tarefa).
@@ -121,7 +115,7 @@ def pior(*symbols):
     return OK
 
 
-# ─── Seção 1 — RAIZ ~/projetos ─────────────────────────────────────────────────────
+# ─── Seção 1 — RAIZ ~/src ─────────────────────────────────────────────────────
 
 
 def sec_raiz():
@@ -324,7 +318,7 @@ def sec_lixo():
 
 def main():
     secoes = [
-        ("1. RAIZ ~/projetos", sec_raiz),
+        ("1. RAIZ ~/src", sec_raiz),
         ("2. DOWNLOADS", sec_downloads),
         ("3. REPOS GIT", sec_repos),
         ("4. WORKTREES ÓRFÃOS", sec_worktrees),
@@ -342,7 +336,7 @@ def main():
     geral = pior(*[st for _, st, _ in resultados])
 
     print("=" * 60)
-    print(f"BOLETIM DE FAXINA — ~/projetos   ({agora})")
+    print(f"BOLETIM DE FAXINA — ~/src   ({agora})")
     print("=" * 60)
     print("RESUMO:")
     for titulo, st, _ in resultados:

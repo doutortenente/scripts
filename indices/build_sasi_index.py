@@ -4,7 +4,7 @@
 Doutrina ZERO ALUCINACAO: so registra fato lido do disco. Nada inferido sem regra explicita.
 Ao final, regenera MAPA-SASI.md a partir da base (evita drift manual).
 
-Uso (da raiz do repo): python3 ~/projetos/scripts/indices/build_sasi_index.py
+Uso (da raiz do repo): python3 ~/src/scripts/indices/build_sasi_index.py
 """
 
 import datetime
@@ -15,7 +15,7 @@ import sqlite3
 
 DEV = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)  # ~/projetos
+)  # ~/src
 ROOT = os.path.join(DEV, "SASI-V3")
 DB = os.path.join(ROOT, "memory", "sasi_index.db")
 MAPA = os.path.join(ROOT, "memory", "MAPA-SASI.md")
@@ -247,9 +247,9 @@ def write_mapa(c, today):
     lines = [
         "# MAPA DO SASI — inventário do repositório",
         "",
-        f"> Gerado automaticamente em {today} por `~/projetos/scripts/indices/build_sasi_index.py`.",
+        f"> Gerado automaticamente em {today} por `~/src/scripts/indices/build_sasi_index.py`.",
         "> Fonte de verdade: `sasi_index.db` (SQLite). Doutrina ZERO ALUCINAÇÃO: só fato lido do disco.",
-        "> Regenerar: `python3 ~/projetos/scripts/indices/build_sasi_index.py` (a partir da raiz do repo).",
+        "> Regenerar: `python3 ~/src/scripts/indices/build_sasi_index.py` (a partir da raiz do repo).",
         "",
         f"**Total:** {tot_files} arquivos · {tot_bytes / 1024 / 1024:.1f} MB · {tot_lines:,} linhas · "
         f"{tot_tokens:,} tokens (excluídos `.git`, `node_modules`, `sasi_index.db`).",
@@ -300,16 +300,16 @@ def write_mapa(c, today):
         "",
         "```bash",
         "# Resumo por categoria",
-        "python3 ~/projetos/scripts/indices/query_sasi_index.py categorias",
+        "python3 ~/src/scripts/indices/query_sasi_index.py categorias",
         "",
         "# Top arquivos por linhas",
-        "python3 ~/projetos/scripts/indices/query_sasi_index.py top --n 15",
+        "python3 ~/src/scripts/indices/query_sasi_index.py top --n 15",
         "",
         "# Buscar path",
-        "python3 ~/projetos/scripts/indices/query_sasi_index.py find FichaCompleta",
+        "python3 ~/src/scripts/indices/query_sasi_index.py find FichaCompleta",
         "",
         "# Busca full-text (FTS5, token a token indexado)",
-        "python3 ~/projetos/scripts/indices/query_sasi_index.py search eventos_clinicos",
+        "python3 ~/src/scripts/indices/query_sasi_index.py search eventos_clinicos",
         "```",
         "",
         "Tabelas SQLite: `files` (sha256, tokens), `dirs`, `files_fts` (FTS5), view `categorias`.",

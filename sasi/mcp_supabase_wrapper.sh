@@ -3,7 +3,7 @@
 #
 # 1) SEGREDO EM REPO PÚBLICO. O .mcp.json do SASI é versionado e o repo
 #    (github.com/doutortenente/SASI-V3-) é PÚBLICO. Nenhuma credencial
-#    pode ficar em claro lá. Este wrapper carrega ~/projetos/.env em tempo de
+#    pode ficar em claro lá. Este wrapper carrega ~/.local/secrets/.env em tempo de
 #    execução, então o .mcp.json não guarda segredo nenhum.
 #
 # 2) CHAVE ERRADA. O .mcp.json passava SUPABASE_ACCESS_TOKEN=${SUPABASE_SECRET_KEY}.
@@ -23,17 +23,17 @@
 # O wrapper do MCP sasi já convive com isso do mesmo jeito.
 set -a
 # shellcheck disable=SC1091
-source /home/dr/projetos/.env 2>/dev/null
+source /home/dr/.local/secrets/.env 2>/dev/null
 set +a
 
 set -uo pipefail
 
 if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
-  echo "mcp_supabase_wrapper: SUPABASE_ACCESS_TOKEN vazio após carregar ~/projetos/.env" >&2
+  echo "mcp_supabase_wrapper: SUPABASE_ACCESS_TOKEN vazio após carregar ~/.local/secrets/.env" >&2
   exit 1
 fi
 
-NODE_BIN=/home/dr/.config/nvm/versions/node/v24.16.0/bin
+NODE_BIN=/home/dr/.local/share/nvm/versions/node/v24.16.0/bin
 export PATH="$NODE_BIN:$PATH"
 
 exec "$NODE_BIN/npx" -y @supabase/mcp-server-supabase@latest \

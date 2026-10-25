@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Consulta rápida ao índice Claude (evita varrer 900+ arquivos).
 
-python3 ~/projetos/scripts/indices/query_claude_index.py skills [--clinical|--dev|--design]
-python3 ~/projetos/scripts/indices/query_claude_index.py skill <nome>
-python3 ~/projetos/scripts/indices/query_claude_index.py scripts
-python3 ~/projetos/scripts/indices/query_claude_index.py agents
-python3 ~/projetos/scripts/indices/query_claude_index.py categorias
-python3 ~/projetos/scripts/indices/query_claude_index.py find <termo>
-python3 ~/projetos/scripts/indices/query_claude_index.py search <termo>
-python3 ~/projetos/scripts/indices/query_claude_index.py cat <categoria>
-python3 ~/projetos/scripts/indices/query_claude_index.py top [--n 15]
+python3 ~/src/scripts/indices/query_claude_index.py skills [--clinical|--dev|--design]
+python3 ~/src/scripts/indices/query_claude_index.py skill <nome>
+python3 ~/src/scripts/indices/query_claude_index.py scripts
+python3 ~/src/scripts/indices/query_claude_index.py agents
+python3 ~/src/scripts/indices/query_claude_index.py categorias
+python3 ~/src/scripts/indices/query_claude_index.py find <termo>
+python3 ~/src/scripts/indices/query_claude_index.py search <termo>
+python3 ~/src/scripts/indices/query_claude_index.py cat <categoria>
+python3 ~/src/scripts/indices/query_claude_index.py top [--n 15]
 """
 
 import argparse
@@ -19,15 +19,15 @@ import sys
 
 DEV = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)  # ~/projetos
-ROOT = os.path.join(DEV, "claude")
+)  # ~/src
+ROOT = os.path.join(DEV, "claude-workspace")
 DB = os.path.join(ROOT, "memory", "claude_index.db")
 
 
 def connect():
     if not os.path.exists(DB):
         sys.exit(
-            f"Índice ausente: {DB}\nRode: python3 ~/projetos/scripts/indices/build_claude_index.py"
+            f"Índice ausente: {DB}\nRode: python3 ~/src/scripts/indices/build_claude_index.py"
         )
     return sqlite3.connect(DB)
 

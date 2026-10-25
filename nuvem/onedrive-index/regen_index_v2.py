@@ -14,7 +14,7 @@ RC = os.path.expanduser("~/.local/bin/rclone")
 BASE = "onedrive:Documentos-claude-e-importacao-drive"
 HOJE = "2026-07-05"
 TMP = os.path.expanduser(
-    "~/projetos/scripts/nuvem/onedrive-index"
+    "~/src/scripts/nuvem/onedrive-index"
 )  # casa definitiva (job dir evapora)
 
 # estado real

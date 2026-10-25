@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verifica Obsidian Local REST API (vault celebro). Uso: bash ~/projetos/scripts/obsidian/check-obsidian-api.sh
+# Verifica Obsidian Local REST API (vault celebro). Uso: bash ~/src/scripts/obsidian/check-obsidian-api.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 # shellcheck disable=SC1091

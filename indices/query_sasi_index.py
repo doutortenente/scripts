@@ -17,7 +17,7 @@ import sys
 
 DEV = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)  # ~/projetos
+)  # ~/src
 ROOT = os.path.join(DEV, "SASI-V3")
 DB = os.path.join(ROOT, "memory", "sasi_index.db")
 

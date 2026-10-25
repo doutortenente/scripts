@@ -73,7 +73,7 @@ def tem(binario: str) -> bool:
 
 
 def _senha_do_cofre() -> str | None:
-    """Le SUDO_TIJOLAO_PASSWORD do cofre ~/projetos/.env, se existir.
+    """Le SUDO_PASSWORD do cofre ~/.local/secrets/.env, se existir.
 
     Boletim que nao consegue ler firewall/AppArmor reporta [SEM_LEITURA] no
     lugar do estado real — e item nao medido nao serve pra decidir nada. O
@@ -81,12 +81,12 @@ def _senha_do_cofre() -> str | None:
     sei" por dois numeros. A senha nunca e impressa nem entra em argv (vai
     por stdin do `sudo -S`).
     """
-    cofre = HOME / "projetos" / ".env"
+    cofre = HOME / ".local" / "secrets" / ".env"
     try:
         if cofre.stat().st_mode & 0o077:
             return None  # permissao frouxa: nao usa
         for linha in cofre.read_text(encoding="utf-8", errors="replace").splitlines():
-            if linha.startswith("SUDO_TIJOLAO_PASSWORD="):
+            if linha.startswith("SUDO_PASSWORD="):
                 v = linha.split("=", 1)[1].strip().strip("\"'")
                 return v or None
     except OSError:
