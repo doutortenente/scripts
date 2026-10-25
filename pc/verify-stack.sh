@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
+# Confere a stack do Tijolão. Desde out-2026 o Hermes e o Workspace rodam em Docker
+# (receita em ~/.config/hermes-stack, sobe com `tijolao up`); os antigos serviços
+# systemd hermes-*.service não existem mais. n8n só é conferido se estiver no ar.
+# Saída: número de FAILs (0 = tudo certo). Uso: verify-stack.sh [--deep]
 set -uo pipefail
 
 FAILURES=0
 DEEP=false
+COFRE=/home/dr/.local/secrets/.env
 
 if (( $# > 1 )); then
   echo "Uso: $0 [--deep]" >&2
@@ -16,24 +21,16 @@ esac
 
 ok() { printf 'OK   %s\n' "$1"; }
 fail() { printf 'FAIL %s\n' "$1"; FAILURES=$((FAILURES + 1)); }
+skip() { printf 'SKIP %s\n' "$1"; }
 
-configure_user_bus() {
-  if systemctl --user show-environment >/dev/null 2>&1; then
-    return 0
-  fi
-
-  local runtime_dir="/run/user/$(id -u)"
-  if [[ -S "$runtime_dir/bus" ]]; then
-    export XDG_RUNTIME_DIR="$runtime_dir"
-    export DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime_dir/bus"
-  fi
-}
-
-check_service() {
-  if systemctl --user is-active --quiet "$1"; then
-    ok "serviço $1"
+check_container() {
+  local estado saude
+  estado=$(docker inspect -f '{{.State.Status}}' "$1" 2>/dev/null)
+  saude=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$1" 2>/dev/null)
+  if [[ "$estado" == running && ( -z "$saude" || "$saude" == healthy ) ]]; then
+    ok "contêiner $1 (${saude:-sem healthcheck})"
   else
-    fail "serviço $1"
+    fail "contêiner $1 (${estado:-ausente}${saude:+/$saude})"
   fi
 }
 
@@ -54,37 +51,32 @@ has_env_value() {
   ' "$file"
 }
 
-configure_user_bus
+n8n_no_ar() { curl --silent --max-time 3 http://127.0.0.1:5678/healthz >/dev/null 2>&1; }
 
-check_service hermes-gateway.service
-check_service hermes-dashboard.service
-check_service hermes-workspace.service
-check_service n8n.service
+check_container hermes-agent
+check_container hermes-workspace
 
 check_http "Hermes API :8642" "http://127.0.0.1:8642/health"
-dashboard_host=$(systemctl --user show hermes-dashboard.service -p ExecStart --value 2>/dev/null |
-  sed -n 's/.*--host \([^ ;}]*\).*/\1/p')
-dashboard_host=${dashboard_host:-127.0.0.1}
-check_http "Dashboard :9119" "http://${dashboard_host}:9119/api/status"
+check_http "Dashboard :9119" "http://127.0.0.1:9119/api/status"
 check_http "Workspace :3000" "http://127.0.0.1:3000/api/sessions"
-check_http "n8n :5678" "http://127.0.0.1:5678/healthz"
-check_http "webhook n8n → Hermes (saúde)" "http://127.0.0.1:5678/webhook/hermes-health"
 
-if codex login status >/dev/null 2>&1; then
-  ok "OAuth do Codex"
+if n8n_no_ar; then
+  ok "n8n :5678"
+  check_http "webhook n8n → Hermes (saúde)" "http://127.0.0.1:5678/webhook/hermes-health"
 else
-  fail "OAuth do Codex"
+  skip "n8n :5678 desligado (não é serviço nem contêiner hoje)"
 fi
 
-if hermes auth list openai-codex >/dev/null 2>&1; then
-  ok "credencial openai-codex do Hermes"
+# Captura antes do grep: com pipefail, o grep -q fecha o cano cedo e o SIGPIPE vira falso FAIL.
+auth_out=$(/home/dr/.local/bin/hermes auth list </dev/null 2>/dev/null)
+if grep -q 'credentials' <<<"$auth_out"; then
+  ok "Hermes tem credencial de modelo"
 else
-  fail "credencial openai-codex do Hermes"
+  fail "Hermes tem credencial de modelo"
 fi
 
 for secret_spec in \
-  '/home/dr/.hermes/.env|API_SERVER_KEY' \
-  '/home/dr/src/hermes-workspace/.env|HERMES_API_TOKEN' \
+  "$COFRE|API_SERVER_KEY" \
   '/home/dr/.config/n8n/n8n.env|N8N_ENCRYPTION_KEY' \
   '/home/dr/.config/n8n/webhook.env|N8N_HERMES_WEBHOOK_SECRET'; do
   secret_file="${secret_spec%%|*}"
@@ -101,42 +93,37 @@ for secret_spec in \
   fi
 done
 
-if [[ -f /home/dr/.hermes/.env && -f /home/dr/src/hermes-workspace/.env ]]; then
-  hermes_key=$(sed -n 's/^API_SERVER_KEY=//p' /home/dr/.hermes/.env | tail -n 1)
-  workspace_key=$(sed -n 's/^HERMES_API_TOKEN=//p' /home/dr/src/hermes-workspace/.env | tail -n 1)
-  if [[ -n "$hermes_key" && "$hermes_key" == "$workspace_key" ]]; then
-    ok "token Hermes ↔ Workspace coincide"
-  else
-    fail "token Hermes ↔ Workspace coincide"
-  fi
-  unset hermes_key workspace_key
+# O Workspace recebe HERMES_API_TOKEN do compose (= API_SERVER_KEY do cofre).
+# Compara só o hash, para o valor nunca aparecer na tela.
+hermes_hash=$(sed -n 's/^API_SERVER_KEY=//p' "$COFRE" 2>/dev/null | tail -n 1 | sha256sum)
+workspace_hash=$(docker exec hermes-workspace printenv HERMES_API_TOKEN 2>/dev/null | sha256sum)
+if [[ -n "$(sed -n 's/^API_SERVER_KEY=//p' "$COFRE" 2>/dev/null)" && "$hermes_hash" == "$workspace_hash" ]]; then
+  ok "token Hermes ↔ Workspace coincide"
+else
+  fail "token Hermes ↔ Workspace coincide"
 fi
+unset hermes_hash workspace_hash
 
 if $DEEP; then
-  if [[ ! -f /home/dr/.hermes/.env ]]; then
-    fail "arquivo de ambiente do Hermes para teste profundo"
+  API_SERVER_KEY=$(sed -n 's/^API_SERVER_KEY=//p' "$COFRE" 2>/dev/null | tail -n 1)
+  payload='{"model":"hermes-agent","messages":[{"role":"user","content":"Responda exatamente STACK_OK"}]}'
+  if [[ -n ${API_SERVER_KEY:-} ]] &&
+    curl --silent --show-error --fail --max-time 120 \
+      -H "Authorization: Bearer ${API_SERVER_KEY}" \
+      -H "Content-Type: application/json" \
+      --data "$payload" \
+      http://127.0.0.1:8642/v1/chat/completions |
+    python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["choices"][0]["message"]["content"].strip()=="STACK_OK"'
+  then
+    ok "chamada profunda Hermes → modelo"
   else
-    set -a
-    # shellcheck disable=SC1091
-    source /home/dr/.hermes/.env
-    set +a
-    payload='{"model":"hermes-agent","messages":[{"role":"user","content":"Responda exatamente STACK_OK"}]}'
-    if [[ -n ${API_SERVER_KEY:-} ]] &&
-      curl --silent --show-error --fail --max-time 120 \
-        -H "Authorization: Bearer ${API_SERVER_KEY}" \
-        -H "Content-Type: application/json" \
-        --data "$payload" \
-        http://127.0.0.1:8642/v1/chat/completions |
-      python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["choices"][0]["message"]["content"].strip()=="STACK_OK"'
-    then
-      ok "chamada profunda Hermes → 9Router → Codex"
-    else
-      fail "chamada profunda Hermes → 9Router → Codex"
-    fi
-    unset API_SERVER_KEY payload
+    fail "chamada profunda Hermes → modelo"
   fi
+  unset API_SERVER_KEY payload
 
-  if [[ ! -f /home/dr/.config/n8n/webhook.env ]]; then
+  if ! n8n_no_ar; then
+    skip "chamada profunda n8n → Hermes (n8n desligado)"
+  elif [[ ! -f /home/dr/.config/n8n/webhook.env ]]; then
     fail "arquivo de ambiente do webhook n8n para teste profundo"
   else
     set -a
@@ -152,9 +139,9 @@ if $DEEP; then
         http://127.0.0.1:5678/webhook/hermes-ask |
       python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["choices"][0]["message"]["content"].strip()=="N8N_HERMES_OK"'
     then
-      ok "chamada profunda n8n → Hermes → 9Router → Codex"
+      ok "chamada profunda n8n → Hermes → modelo"
     else
-      fail "chamada profunda n8n → Hermes → 9Router → Codex"
+      fail "chamada profunda n8n → Hermes → modelo"
     fi
     unset N8N_HERMES_WEBHOOK_SECRET n8n_payload
   fi
