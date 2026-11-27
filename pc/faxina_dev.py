@@ -17,7 +17,7 @@ POR QUE EXISTE
     com --apply próprio); este script é só o diagnóstico.
 
 COMO USAR
-    python3 /home/dr/src/scripts/faxina_dev.py
+    python3 /home/dr/src/scripts/pc/faxina_dev.py
     (sem flags — é boletim, sempre sai com código 0)
 
 LIBS
@@ -46,12 +46,10 @@ DOWNLOADS = HOME / "Downloads"
 # pós-migração ~/dev→~/src e _lab→rascunhos).
 # Qualquer item na raiz fora desta lista é sinalizado como intruso.
 RAIZ_ESPERADA = {
-    # repos de ~/src (25-out-2026; mapa em claude-workspace/context/workspace-claude.md)
-    "claude-workspace",
+    # repos de ~/src (27-nov-2026: claude-workspace e SASI-V3 apagados)
     "hermes-agent",
     "hermes-workspace",
     "plantao-ao-vivo",
-    "sasi",
     "scripts",
 }
 
@@ -72,12 +70,9 @@ DOWNLOADS_PINNED = {
     "vercel-main.zip",
 }
 
-# Repos git vigiados: (rótulo, caminho, branch local)
-REPOS = [
-    ("sasi", DEV / "sasi", "main"),
-    ("claude", DEV / "claude", "main"),
-    ("celebro", HOME / "vaults" / "celebro", "main"),
-]
+# Repos git vigiados: descobertos na hora — toda pasta de ~/src com .git
+# (mesma regra de pc/saude_pc.py → sec_git; 27-nov-2026).
+REPOS = sorted(p for p in DEV.iterdir() if (p / ".git").exists()) if DEV.is_dir() else []
 
 # Pastas ignoradas na varredura de lixo (seção 5).
 LIXO_EXCLUIR = {"rascunhos", "node_modules", ".git"}
@@ -179,7 +174,8 @@ def sec_downloads():
 
 def sec_repos():
     linhas, status = [], OK
-    for rotulo, repo, branch in REPOS:
+    for repo in REPOS:
+        rotulo = repo.name
         if not (repo / ".git").exists():
             linhas.append(f"  {WARN} {rotulo}: não é repo git em {repo}")
             status = pior(status, WARN)
@@ -204,7 +200,7 @@ def sec_repos():
         frc, _, ferr = git(repo, ["fetch", "--quiet"], timeout=40)
         sem_rede = frc != 0
         rc2, out2, _ = git(
-            repo, ["rev-list", "--left-right", "--count", f"{branch}...origin/{branch}"]
+            repo, ["rev-list", "--left-right", "--count", "HEAD...@{u}"]
         )
         if rc2 == 0 and out2:
             partes = out2.split()
@@ -247,7 +243,8 @@ def sec_repos():
 
 def sec_worktrees():
     linhas, status = [], OK
-    for rotulo, repo, _ in REPOS:
+    for repo in REPOS:
+        rotulo = repo.name
         if not (repo / ".git").exists():
             continue
         rc, out, _ = git(repo, ["worktree", "list"])
@@ -272,7 +269,7 @@ def sec_worktrees():
                 for c in conteudo:
                     linhas.append(f"       - {c}")
     if not linhas:
-        linhas.append(f"  {OK} nenhum worktree órfão nos 4 repos")
+        linhas.append(f"  {OK} nenhum worktree órfão nos {len(REPOS)} repos")
     return status, linhas
 
 

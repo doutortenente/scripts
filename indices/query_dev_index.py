@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Consulta memory/dev_index.db (~/projetos inteiro).
+"""Consulta memory/dev_index.db (~/src inteiro).
 
 python3 ~/src/scripts/indices/query_dev_index.py repos
 python3 ~/src/scripts/indices/query_dev_index.py find <termo>

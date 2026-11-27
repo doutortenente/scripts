@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verifica Obsidian Local REST API (vault celebro). Uso: bash ~/src/scripts/obsidian/check-obsidian-api.sh
+# Verifica Obsidian Local REST API. Uso: bash ~/src/scripts/obsidian/check-obsidian-api.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 # shellcheck disable=SC1091
@@ -14,7 +14,7 @@ if [ -z "$KEY" ]; then
 fi
 
 if ! pgrep -x obsidian >/dev/null 2>&1; then
-  echo "AVISO: Obsidian não está rodando. Abra o vault celebro em /home/dr/vaults/celebro"
+  echo "AVISO: Obsidian não está rodando. Abra o Obsidian no cofre que tem o plugin Local REST API."
 fi
 
 code=$(curl -s -o /tmp/obsidian_health.txt -w "%{http_code}" \

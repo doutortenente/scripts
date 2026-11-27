@@ -129,8 +129,8 @@ def main() -> int:
                 if p.exists():
                     targets.append((p, f"Grok cache: {sub}"))
 
-    # 3. Backups .bak soltos em ~/projetos e ~/.config (regeneráveis)
-    for p in glob_targets(HOME / "dev", [".mcp.json.bak*", "**/*.bak-2026*"]):
+    # 3. Backups .bak soltos em ~/src (regeneráveis)
+    for p in glob_targets(HOME / "src", [".mcp.json.bak*", "**/*.bak-2026*"]):
         targets.append((p, f"backup órfão: {p.relative_to(HOME)}"))
 
     # 4. Caches de gerenciadores (pip / npm)

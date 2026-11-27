@@ -336,7 +336,7 @@ def sec_node() -> Secao:
 # --------------------------------------------------------------------------- #
 def sec_git() -> Secao:
     s = Secao("Repos git (offline)")
-    repos = [HOME / "projetos/SASI-V3", HOME / "projetos/claude", HOME / "vaults/celebro"]
+    repos = sorted(p for p in (HOME / "src").iterdir() if (p / ".git").exists())
     sujo_ou_frente = False
     for repo in repos:
         if not (repo / ".git").exists():
