@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Indexa ~/projetos/ inteiro → memory/dev_index.db + MAPA-DEV.md.
+"""Indexa ~/src/ inteiro → memory/dev_index.db + MAPA-DEV.md.
 
 Doutrina ZERO ALUCINACAO: so fato lido do disco.
-Uso: python3 ~/src/scripts/indices/build_dev_index.py  (de ~/projetos)
+Uso: python3 ~/src/scripts/indices/build_dev_index.py  (de ~/src)
 """
 
 import datetime
@@ -221,7 +221,7 @@ def write_mapa(c, today):
     ).fetchall()
 
     out = [
-        "# MAPA — ~/projetos/",
+        "# MAPA — ~/src/",
         "",
         f"> Gerado {today} por `~/src/scripts/indices/build_dev_index.py`.",
         f"> DB: `memory/dev_index.db` · FTS5 token a token.",
